@@ -1,0 +1,24 @@
+version: '3.7'
+services:
+  airflow:
+    image: dataeng-dibimbing/airflow
+    container_name: ${AIRFLOW_CONTAINER_NAME}
+    hostname: ${AIRFLOW_HOST_NAME}
+    entrypoint: /scripts/airflow_entrypoint.sh
+    restart: always
+    environment:
+      - DW_POSTGRES_URI=${DW_POSTGRES_URI}
+      - DL_POSTGRES_URI=${DL_POSTGRES_URI}
+      - STAGING_POSTGRES_URI=${STAGING_POSTGRES_URI}
+      - DM_POSTGRES_URI=${DM_POSTGRES_URI}
+    volumes:
+      - ../dags:/opt/airflow/dags
+      - ../data:/opt/airflow/data
+      - ../scripts:/scripts
+    ports:
+      - ${AIRFLOW_WEBSERVER_PORT}:8080
+  
+networks:
+  default:
+    name: dataeng-network
+    external: true
