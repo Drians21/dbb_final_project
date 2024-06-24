@@ -7,10 +7,10 @@ services:
     entrypoint: /scripts/airflow_entrypoint.sh
     restart: always
     environment:
-      - DW_POSTGRES_URI=${DW_POSTGRES_URI}
+      # - DW_POSTGRES_URI=${DW_POSTGRES_URI}
       - DL_POSTGRES_URI=${DL_POSTGRES_URI}
-      - STAGING_POSTGRES_URI=${STAGING_POSTGRES_URI}
-      - DM_POSTGRES_URI=${DM_POSTGRES_URI}
+      # - STAGING_POSTGRES_URI=${STAGING_POSTGRES_URI}
+      # - DM_POSTGRES_URI=${DM_POSTGRES_URI}
     volumes:
       - ../dags:/opt/airflow/dags
       - ../data:/opt/airflow/data

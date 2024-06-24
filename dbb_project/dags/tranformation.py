@@ -10,13 +10,11 @@ import polars as pl
 import os
 
 
-def tranformation_and_load_to_dw():
+def fact_sales():
     hook = PostgresHook(postgres_conn_id="postgres_dl")
     engine = hook.get_sqlalchemy_engine()
     hook2 = PostgresHook(postgres_conn_id="postgres_dw")
     engine2 = hook2.get_sqlalchemy_engine()
-
-    # Transformation and Dimentional Modeling
 
     query_fact_sales = """
         SELECT 
@@ -35,22 +33,36 @@ def tranformation_and_load_to_dw():
         join "products" p on oi."product_id" = p."id"
         join "suppliers" s on p."supplier_id" = s."id"
         """
+    
     df_fact_sales = hook.get_pandas_df(sql=query_fact_sales)
     df_fact_sales.dropna(inplace=True)
     df_fact_sales.drop_duplicates(inplace=True)
     df_fact_sales.to_sql('fact_sales', engine2, if_exists="replace", index=False)
 
-    # dim_customers table
+
+def dim_customers():
+    hook = PostgresHook(postgres_conn_id="postgres_dl")
+    engine = hook.get_sqlalchemy_engine()
+    hook2 = PostgresHook(postgres_conn_id="postgres_dw")
+    engine2 = hook2.get_sqlalchemy_engine()
+
     query_customers = """
         SELECT * FROM "customers"
     """
+
     df_dim_customers = hook.get_pandas_df(sql=query_customers)
     df_dim_customers.drop(columns='Unnamed: 0', inplace=True)
     df_dim_customers.dropna(inplace=True)
     df_dim_customers.drop_duplicates(inplace=True)
     df_dim_customers.to_sql('dim_customers', engine2, if_exists="replace", index=False)
 
-    # dim_products table
+
+def dim_products():
+    hook = PostgresHook(postgres_conn_id="postgres_dl")
+    engine = hook.get_sqlalchemy_engine()
+    hook2 = PostgresHook(postgres_conn_id="postgres_dw")
+    engine2 = hook2.get_sqlalchemy_engine()
+
     query_products = """
         SELECT 
             p."id" as product_id, 
@@ -59,12 +71,19 @@ def tranformation_and_load_to_dw():
             FROM "products" p
             JOIN "product_category" c ON p."category_id" = c."id"
     """
+
     df_dim_products = hook.get_pandas_df(sql=query_products)
     df_dim_products.dropna(inplace=True)
     df_dim_products.drop_duplicates(inplace=True)
     df_dim_products.to_sql('dim_products', engine2, if_exists="replace", index=False)
 
-    # dim_suppliers table
+
+def dim_suppliers():
+    hook = PostgresHook(postgres_conn_id="postgres_dl")
+    engine = hook.get_sqlalchemy_engine()
+    hook2 = PostgresHook(postgres_conn_id="postgres_dw")
+    engine2 = hook2.get_sqlalchemy_engine()
+
     query_suppliers = """
         SELECT
             "id" as supplier_id,
@@ -72,12 +91,20 @@ def tranformation_and_load_to_dw():
             "country" as supplier_country
         FROM "suppliers"
     """
+
     df_dim_suppliers = hook.get_pandas_df(sql=query_suppliers)
     df_dim_suppliers.dropna(inplace=True)
     df_dim_suppliers.drop_duplicates(inplace=True)
     df_dim_suppliers.to_sql('dim_suppliers', engine2, if_exists="replace", index=False)
 
-    # dim_login_attempts table
+
+def dim_login_attempts():
+    hook = PostgresHook(postgres_conn_id="postgres_dl")
+    engine = hook.get_sqlalchemy_engine()
+    hook2 = PostgresHook(postgres_conn_id="postgres_dw")
+    engine2 = hook2.get_sqlalchemy_engine()
+
+
     query_login_attempts = """
         SELECT
             "id" as login_attempts_id,
@@ -85,12 +112,19 @@ def tranformation_and_load_to_dw():
             "attempted_at"
         FROM "login_attempts"
     """
+
     df_dim_login_attempts = hook.get_pandas_df(sql=query_login_attempts)
     df_dim_login_attempts.dropna(inplace=True)
     df_dim_login_attempts.drop_duplicates(inplace=True)
     df_dim_login_attempts.to_sql('dim_login_attempts', engine2, if_exists="replace", index=False)
 
-    # dim_orders table
+
+def dim_orders():
+    hook = PostgresHook(postgres_conn_id="postgres_dl")
+    engine = hook.get_sqlalchemy_engine()
+    hook2 = PostgresHook(postgres_conn_id="postgres_dw")
+    engine2 = hook2.get_sqlalchemy_engine()
+
     query_orders = """
         SELECT
             o."id" as order_id,
@@ -100,10 +134,12 @@ def tranformation_and_load_to_dw():
         JOIN "order_items" oi ON o."id" = oi."order_id"
         JOIN "coupons" cp ON oi."coupon_id" = cp."id"
     """
+
     df_dim_orders = hook.get_pandas_df(sql=query_orders)
     df_dim_orders.dropna(inplace=True)
     df_dim_orders.drop_duplicates(inplace=True)
     df_dim_orders.to_sql('dim_orders', engine2, if_exists="replace", index=False)
+
 
 
 
@@ -126,10 +162,39 @@ with DAG(
     catchup=False,
 ) as dag:
     start_task = DummyOperator(task_id='start', dag=dag)
-    tranformation_and_load_to_dw = PythonOperator(
-        task_id="tranformation_and_load_to_dw",
-        python_callable=tranformation_and_load_to_dw,
-        dag=dag,
-    )
+    with TaskGroup('tranformation_and_load_to_dw') as tranformation_and_load_to_dw:
+        fact_sales = PythonOperator(
+            task_id="fact_sales",
+            python_callable=fact_sales,
+            dag=dag,
+        )
+        dim_customers = PythonOperator(
+            task_id="dim_customers",
+            python_callable=dim_customers,
+            dag=dag,
+        )
+        dim_products = PythonOperator(
+            task_id="dim_products",
+            python_callable=dim_products,
+            dag=dag,
+        )
+        dim_suppliers = PythonOperator(
+            task_id="dim_suppliers",
+            python_callable=dim_suppliers,
+            dag=dag,
+        )
+        dim_login_attempts = PythonOperator(
+            task_id="dim_login_attempts",
+            python_callable=dim_login_attempts,
+            dag=dag,
+        )
+        dim_orders = PythonOperator(
+            task_id="dim_orders",
+            python_callable=dim_orders,
+            dag=dag,
+        )
+
+        [fact_sales, dim_customers, dim_products, dim_suppliers, dim_login_attempts, dim_orders]
+
     end_task = DummyOperator(task_id='end', dag=dag)
     start_task >> tranformation_and_load_to_dw >> end_task
