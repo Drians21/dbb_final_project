@@ -8,9 +8,6 @@ airflow connections add \
 --conn-uri $DL_POSTGRES_URI \
 'postgres_dl'
 airflow connections add \
---conn-uri $STAGING_POSTGRES_URI \
-'staging'
-airflow connections add \
 --conn-uri $DM_POSTGRES_URI \
 'postgres_dm'
 
